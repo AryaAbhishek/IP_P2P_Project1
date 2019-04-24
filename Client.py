@@ -13,10 +13,11 @@ def get_rfc_num_ttl():
     rfc_ttl = input("Enter the rfc title required. \n")
     return rfc_num, rfc_ttl
 
+
 def lookup_rfc(rfc_num, rfc_ttl):
     connection_msg = "LOOKUP" + " RFC " + str(rfc_num) + " P2P-CI/1.0 \n" \
         "Host: " + str(socket.gethostname()) + " (" + str(clientSocket.getsockname()[0]) + ") \n" \
-        "Port: " + str(clientSocket.getsockname()[1]) + "\n" \
+        "Port: " + str(upload_client_port) + "\n" \
         "Title: " + str(rfc_ttl) + "\n"
     clientSocket.send(pickle.dumps([connection_msg, "lookup", rfc_num]))
     server_data = pickle.loads(clientSocket.recv(1024))
@@ -26,22 +27,22 @@ def lookup_rfc(rfc_num, rfc_ttl):
 
 
 def get_rfc(rfc_num, rfc_ttl):
-    msg = "LOOKUP" + " RFC " + str(rfc_num) + " P2P-CI/1.0 \n" \
+    connection_msg = "LOOKUP" + " RFC " + str(rfc_num) + " P2P-CI/1.0 \n" \
         "Host: " + str(socket.gethostname()) + " (" + str(clientSocket.getsockname()[0]) + ") \n" \
-        "Port: " + str(clientSocket.getsockname()[1]) + "\n"
+        "Port: " + str(upload_client_port) + "\n"
     "Title: " + str(rfc_ttl) + "\n"
-    clientSocket.send(pickle.dumps([msg,  "get", rfc_num]))
+    clientSocket.send(pickle.dumps([connection_msg,  "lookup", rfc_num]))
     server_data = pickle.loads(clientSocket.recv(1024))
     print(server_data)
     if server_data[0]:
-        new_soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        new_soc.connect((server_data[0]["Host_Name"], int(server_data[0]["Port_Number"])))
+        peer_connection_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        peer_connection_socket.connect((server_data[0][0]["Host_Name"], int(server_data[0][0]["Port_Number"])))
         os_type_version = platform.platform()
         msg = "GET RFC " + str(rfc_num) + " P2P-CI/1.0 \n" \
             "Host: " + str(socket.gethostname()) + " (" + str(clientSocket.getsockname()[0]) + ") \n" \
             "OS: " + str(os_type_version) + "\n"
-        new_soc.send(bytes(msg, 'utf-8'))
-        response = pickle.loads(new_soc.recv(1024))
+        peer_connection_socket.send(bytes(msg, 'utf-8'))
+        response = pickle.loads(peer_connection_socket.recv(1024))
         for x in range(len(response)):
             print(response[x])
         path = os.getcwd()
@@ -53,7 +54,7 @@ def get_rfc(rfc_num, rfc_ttl):
             filename = path + "/rfc/" + filename
         with open(filename, 'w') as f:
             f.write(response[1])
-        new_soc.close()
+        peer_connection_socket.close()
     else:
         print(server_data[1])
 
@@ -70,7 +71,7 @@ def add_rfc(rfc_num, rfc_ttl):
     else:
         connection_msg = "ADD RFC " + str(rfc_num) + " P2P-CI/1.0 \n" \
             "Host: " + str(socket.gethostname()) + " (" + str(clientSocket.getsockname()[0]) + ") \n" \
-            "Port: " + str(clientSocket.getsockname()[1]) + "\n" \
+            "Port: " + str(upload_client_port) + "\n" \
             "Title: " + str(rfc_ttl) + "\n"
     return connection_msg
 
@@ -78,43 +79,43 @@ def add_rfc(rfc_num, rfc_ttl):
 def list_rfc():
     connection_msg = "LIST ALL P2P-CI/1.0 \n" \
             "Host: " + str(socket.gethostname()) + " (" + str(clientSocket.getsockname()[0]) + ") \n" \
-            "Port: " + str(clientSocket.getsockname()[1]) + "\n"
+            "Port: " + str(upload_client_port) + "\n"  # clientSocket.getsockname()[1]
     clientSocket.send(pickle.dumps([connection_msg, "list"]))
     server_data = pickle.loads(clientSocket.recv(1024))
     for rfc_list in server_data[1][0]:
         print('RFC '+' '.join([rfc_list[rfc_head] for rfc_head in server_data[1][1]]))
 
 
-def connection_reply(rfc_num):
-    filename = "rfc" + str(rfc_num) + ".txt"
-    filename = "".join(filename.split())
-    filename = "rfc\\" + filename if platform.system == "Windows" else "rfc/" + filename
-    if not os.path.exists(filename) == 0:
-        file = open(filename)
-        return ["P2P-CI/1.0 200 OK\n" \
-                "Date: " + time.strftime("%a, %d %b %Y %X %Z", time.localtime()) + "\n" \
-                "OS: " + str(platform.system()) + "\n" \
-                "Last-Modified: " + time.ctime(os.path.getmtime(filename)) + "\n" \
-                "Content-Length: " + str(os.path.getsize(filename)) + "\n" \
+def peer_response(rfc_num):
+    file_name = "".join(("rfc" + str(rfc_num) + ".txt").split())
+    file_location = "rfc\\" + file_name if platform.system == "Windows" else "rfc/" + file_name
+    if not os.path.exists(file_location) == 0:
+        file_data = open(file_location)
+        return ["P2P-CI/1.0 200 OK\n"
+                "Date: " + time.strftime("%a, %d %b %Y %X %Z", time.localtime()) + "\n"
+                "OS: " + str(platform.system()) + "\n"
+                "Last-Modified: " + time.ctime(os.path.getmtime(file_location)) + "\n"
+                "Content-Length: " + str(os.path.getsize(file_location)) + "\n"
                 "Content-Type: text/text \n",
-                str(file.read())]
+                str(file_data.read())]
     else:
         return "P2P-CI/1.0 404 Not Found\n" \
                "Date:" + time.strftime("%a, %d %b %Y %X %Z", time.localtime()) + "\n" \
                 "OS: " + str(platform.system()) + "\n"
 
 
-def connect_peer():
-    upload_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    upload_host = socket.gethostname()
-    upload_socket.bind((upload_host, upload_client_port))
-    upload_socket.listen(10)
+def listen_peer():
+    peer_response_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    peer_response_host = socket.gethostname()
+    peer_response_socket.bind((peer_response_host, upload_client_port))
+    peer_response_socket.listen()
     while True:
-        conn, ip = upload_socket.accept()
-        data = conn.recv(1024).decode('utf-8')
-        rfc_no = data[data.index('C') + 1: data.index('P') - 1]
-        conn.send(pickle.dumps(connection_reply(rfc_no)))
-        conn.close()
+        peer_connection, peer_ip = peer_response_socket.accept()
+        data = peer_connection.recv(1024).decode('utf-8')
+        rfc_num = data[data.index('C') + 1: data.index('P') - 1]
+        peer_connection.send(pickle.dumps(peer_response(rfc_num)))
+        peer_connection.close()
+    peer_response_socket.close()
 
 
 if __name__ == "__main__":
@@ -136,7 +137,7 @@ if __name__ == "__main__":
         pickle.dumps([connection_message, client_rfc_list, clientSocket.getsockname()[0], upload_client_port]))
     print(clientSocket.recv(1024).decode('utf-8'))
 
-    start_new_thread(connect_peer, ())
+    start_new_thread(listen_peer, ())
     while True:
         try:
             method = input("Enter a method from: get, add, lookup, list, exit\n")
@@ -159,7 +160,6 @@ if __name__ == "__main__":
                     print("either {0} or {1} does not exist".format(rfc_num, rfc_ttl))
             elif method == 'lookup':
                 rfc_num, rfc_ttl = get_rfc_num_ttl()
-                # print(rfc_num, rfc_ttl)
                 lookup_rfc(rfc_num, rfc_ttl)
             elif method == 'list':
                 list_rfc()
