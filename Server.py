@@ -12,6 +12,36 @@ client_rfc = []
 combined_rfc_list = []
 
 
+# method to lookup a particular rfc
+def rfc_lookup(data):
+    response = []
+    for rfc_list in combined_rfc_list:
+        if rfc_list['RFC_Number'] == data:
+            response.append(rfc_list)
+    if len(response) == 0:
+        msg = "P2P-CI/1.0 404 Not Found " + "\n" \
+            "Date: " + time.strftime("%a, %d %b %Y %X %Z", time.localtime()) + "\n" \
+            "OS: " + str(platform.platform()) + "\n"
+    else:
+        msg = "P2P-CI/1.0 200 OK " + "\n"
+    return pickle.dumps((response, msg))
+
+
+# method to add a client rfc info to server list
+def rfc_add_to_list(connection_socket, client_data, peer_port):
+    rfc_number = client_data[1][0]
+    rfc_title = client_data[1][1]
+    connection_socket.send(bytes(
+        "P2P-CI/1.0 200 OK \nRFC " + rfc_number + " " + rfc_title +
+        " " + str(address[0]) + " " + str(client_data[3]), 'utf-8'))
+    keys = ['RFC_Number', 'RFC_Title', 'Host_Name']
+    value = [str(rfc_number), rfc_title, address[0]]
+    client_rfc.insert(0, dict(zip(keys, value)))
+    combined_keys = ['RFC_Number', 'RFC_Title', 'Host_Name', 'Port_Number']
+    combined_value = [str(rfc_number), rfc_title, address[0], str(peer_port)]
+    combined_rfc_list.insert(0, dict(zip(combined_keys, combined_value)))
+
+
 def new_child_thread(connectionSocket, address):
     connectionSocket.send(bytes("Connection to server {0} established successfully.".format(serverHost), 'utf-8'))
     server_data = pickle.loads(connectionSocket.recv(1024))
@@ -21,9 +51,6 @@ def new_child_thread(connectionSocket, address):
     active_clients.insert(0, dict(zip(peer_key, peer_value)))
     client_rfc_key = ['RFC_Number', 'RFC_Title', 'Host_Name']
     combined_rfc_key = ['RFC_Number', 'RFC_Title', 'Host_Name', 'Port_Number']
-    print('\n\n\n')
-    for i in server_data:
-        print(i, '\n\n')
     for rfc in server_data[1]:
         rfc_num = rfc['RFC_Number']
         rfc_ttl = rfc['RFC_Title']
@@ -40,44 +67,9 @@ def new_child_thread(connectionSocket, address):
             break
         else:
             if client_data[0][0] == "A":
-                rfc_number = client_data[1][0]
-                rfc_title = client_data[1][1]
-                connectionSocket.send(bytes(
-                    "P2P-CI/1.0 200 OK \nRFC " + rfc_number + " " + rfc_title +
-                    " " + str(address[0]) + " " + str(client_data[3]),'utf-8'))
-                keys = ['RFC_Number', 'RFC_Title', 'Host_Name']
-                value = [str(rfc_number), rfc_title, address[0]]
-                client_rfc.insert(0, dict(zip(keys, value)))
-                combined_keys = ['RFC_Number', 'RFC_Title', 'Host_Name', 'Port_Number']
-                combined_value = [str(rfc_number), rfc_title, address[0], str(peer_port)]
-                combined_rfc_list.insert(0, dict(zip(combined_keys, combined_value)))
-            # if client_data[1] == "get":
-            #     for rfc_list in combined_rfc_list:
-            #         if rfc_list['RFC_Number'] == client_data[2]:
-            #             response = rfc_list
-            #             break
-            #         else:
-            #             response = False
-            #     if not response:
-            #         msg = "P2P-CI/1.0 404 Not Found" + "\n" \
-            #             "Date: " + time.strftime("%a, %d %b %Y %X %Z", time.localtime()) + "\n" \
-            #             "OS: " + str(platform.platform()) + "\n"
-            #     else:
-            #         msg = "P2P-CI/1.0 200 OK" + "\n"
-            #     new_data = pickle.dumps((response, msg))
-            #     connectionSocket.send(new_data)
-            if client_data[1] == "lookup":
-                response = []
-                for rfc_list in combined_rfc_list:
-                    if rfc_list['RFC_Number'] == client_data[2]:
-                        response.append(rfc_list)
-                if len(response) == 0:
-                    msg = "P2P-CI/1.0 404 Not Found " + "\n" \
-                        "Date: " + time.strftime("%a, %d %b %Y %X %Z", time.localtime()) + "\n" \
-                        "OS: " + str(platform.platform()) + "\n"
-                else:
-                    msg = "P2P-CI/1.0 200 OK " + "\n"
-                new_data = pickle.dumps((response, msg))
+                rfc_add_to_list(connectionSocket, client_data, peer_port)
+            elif client_data[1] == "lookup":
+                new_data = rfc_lookup(client_data[2])
                 connectionSocket.send(new_data)
             elif client_data[1] == 'list':
                 connection_msg = "P2P-CI/1.0 200 OK"
@@ -103,10 +95,5 @@ if __name__ == "__main__":
         serverSocket.listen()
         connectionSocket, address = serverSocket.accept()
         start_new_thread(new_child_thread, (connectionSocket, address))
-        # if there are no active clients, admin has option to close the connection.
-        # if len(active_clients) == 0:
-        #     status = input("do you want to terminate server.(yes/no\n")
-        #     if status.lower() == "yes":
-        #         break
     print("closing the server.\n")
     serverSocket.close()

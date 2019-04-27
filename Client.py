@@ -14,7 +14,7 @@ def get_rfc_num_ttl():
     return rfc_num, rfc_ttl
 
 
-def lookup_rfc(rfc_num, rfc_ttl):
+def lookup_rfc(rfc_num, rfc_ttl, option):
     connection_msg = "LOOKUP" + " RFC " + str(rfc_num) + " P2P-CI/1.0 \n" \
         "Host: " + str(socket.gethostname()) + " (" + str(clientSocket.getsockname()[0]) + ") \n" \
         "Port: " + str(upload_client_port) + "\n" \
@@ -24,15 +24,12 @@ def lookup_rfc(rfc_num, rfc_ttl):
     print(server_data[1], end="")
     for rfc in server_data[0]:
         print('RFC '+' '.join([rfc[r] for r in ['RFC_Number', 'RFC_Title', 'Host_Name', 'Port_Number']]))
+    if option == "get":
+        return server_data
 
 
 def get_rfc(rfc_num, rfc_ttl):
-    connection_msg = "LOOKUP" + " RFC " + str(rfc_num) + " P2P-CI/1.0 \n" \
-        "Host: " + str(socket.gethostname()) + " (" + str(clientSocket.getsockname()[0]) + ") \n" \
-        "Port: " + str(upload_client_port) + "\n"
-    "Title: " + str(rfc_ttl) + "\n"
-    clientSocket.send(pickle.dumps([connection_msg,  "lookup", rfc_num]))
-    server_data = pickle.loads(clientSocket.recv(1024))
+    server_data = lookup_rfc(rfc_num, rfc_ttl, "get")
     print(server_data)
     if server_data[0]:
         peer_connection_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -64,16 +61,15 @@ def add_rfc(rfc_num, rfc_ttl):
     file_name = "rfc" + rfc_num + ".txt"
     os_type = platform.system()
     file_path = path_name + "\\rfc\\" + file_name if os_type == "Windows" else path_name + "/rfc/" + file_name;
-    print(path_name, os_type, file_name, file_path, '\n')
-    connection_msg = ''
+    connection_msg1 = ''
     if not os.path.isfile(file_path):
         print(file_name + " does not exist.\n")
     else:
-        connection_msg = "ADD RFC " + str(rfc_num) + " P2P-CI/1.0 \n" \
+        connection_msg1 = "ADD RFC " + str(rfc_num) + " P2P-CI/1.0 \n" \
             "Host: " + str(socket.gethostname()) + " (" + str(clientSocket.getsockname()[0]) + ") \n" \
             "Port: " + str(upload_client_port) + "\n" \
             "Title: " + str(rfc_ttl) + "\n"
-    return connection_msg
+    return connection_msg1
 
 
 def list_rfc():
@@ -131,7 +127,7 @@ if __name__ == "__main__":
     RFC_Title = [number[0: number.find(".")] for number in os.listdir(os.getcwd() + "/rfc") if 'rfc' in number]
     connection_message = ""
     for number, title in zip(RFC_Number, RFC_Title):
-        client_rfc_list.insert(0, dict(zip(peer_keys,[number, title])))
+        client_rfc_list.insert(0, dict(zip(peer_keys, [number, title])))
         connection_message += add_rfc(number, title)
     clientSocket.send(
         pickle.dumps([connection_message, client_rfc_list, clientSocket.getsockname()[0], upload_client_port]))
@@ -160,7 +156,7 @@ if __name__ == "__main__":
                     print("either {0} or {1} does not exist".format(rfc_num, rfc_ttl))
             elif method == 'lookup':
                 rfc_num, rfc_ttl = get_rfc_num_ttl()
-                lookup_rfc(rfc_num, rfc_ttl)
+                lookup_rfc(rfc_num, rfc_ttl, "lookup")
             elif method == 'list':
                 list_rfc()
             else:
