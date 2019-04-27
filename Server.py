@@ -28,7 +28,7 @@ def rfc_lookup(data):
 
 
 # method to add a client rfc info to server list
-def rfc_add_to_list(connection_socket, client_data, peer_port):
+def rfc_add_to_list(connection_socket, address, client_data, peer_port):
     rfc_number = client_data[1][0]
     rfc_title = client_data[1][1]
     connection_socket.send(bytes(
@@ -67,7 +67,7 @@ def new_child_thread(connectionSocket, address):
             break
         else:
             if client_data[0][0] == "A":
-                rfc_add_to_list(connectionSocket, client_data, peer_port)
+                rfc_add_to_list(connectionSocket, address, client_data, peer_port)
             elif client_data[1] == "lookup":
                 new_data = rfc_lookup(client_data[2])
                 connectionSocket.send(new_data)
@@ -88,7 +88,9 @@ if __name__ == "__main__":
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serverPort = 7734
     serverHost = socket.gethostname()
+    print(serverHost)
     serverSocket.bind((serverHost, serverPort))
+    print(serverSocket.getsockname())
     print("starting the server to listen for incoming connection...\n")
     # listen client connection request and create a new thread which will handle request of the client
     while True:

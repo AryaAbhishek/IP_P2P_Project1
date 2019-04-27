@@ -117,10 +117,10 @@ def listen_peer():
 if __name__ == "__main__":
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # serverHost address depend on the system which is hosting the server, So may have to change every time
-    serverHost = '192.168.56.1' #'192.168.0.20' #'10.155.55.187'
+    serverHost = "152.7.99.53"  #'10.155.9.81'  # '192.168.56.1' #'192.168.0.20' #'10.155.55.187'
     serverPort = 7734
     clientSocket.connect((serverHost, serverPort))
-    upload_client_port = 8000 + random.randint(1, 100)
+    upload_client_port = 8001
     client_rfc_list = []
     peer_keys = ['RFC_Number', 'RFC_Title']
     RFC_Number = [number[number.find("c") + 1: number.find(".")] for number in os.listdir(os.getcwd() + "/rfc") if 'rfc' in number]
