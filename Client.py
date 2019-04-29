@@ -78,6 +78,7 @@ def list_rfc():
             "Port: " + str(upload_client_port) + "\n"  # clientSocket.getsockname()[1]
     clientSocket.send(pickle.dumps([connection_msg, "list"]))
     server_data = pickle.loads(clientSocket.recv(1024))
+    print(server_data[0])
     for rfc_list in server_data[1][0]:
         print('RFC '+' '.join([rfc_list[rfc_head] for rfc_head in server_data[1][1]]))
 
@@ -117,7 +118,7 @@ def listen_peer():
 if __name__ == "__main__":
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # serverHost address depend on the system which is hosting the server, So may have to change every time
-    serverHost = "152.7.99.53"  #'10.155.9.81'  # '192.168.56.1' #'192.168.0.20' #'10.155.55.187'
+    serverHost = '192.168.56.1'  #"152.7.99.53"  #'10.155.9.81'  # '192.168.56.1' #'192.168.0.20' #'10.155.55.187'
     serverPort = 7734
     clientSocket.connect((serverHost, serverPort))
     upload_client_port = 8001
