@@ -19,7 +19,7 @@ def lookup_rfc(rfc_num, rfc_ttl, option):
         "Host: " + str(socket.gethostname()) + " (" + str(clientSocket.getsockname()[0]) + ") \n" \
         "Port: " + str(upload_client_port) + "\n" \
         "Title: " + str(rfc_ttl) + "\n"
-    clientSocket.send(pickle.dumps([connection_msg, "lookup", rfc_num]))
+    clientSocket.send(pickle.dumps([connection_msg, "lookup", rfc_num, rfc_ttl]))
     server_data = pickle.loads(clientSocket.recv(1024))
     print(server_data[1], end="")
     for rfc in server_data[0]:
@@ -30,7 +30,7 @@ def lookup_rfc(rfc_num, rfc_ttl, option):
 
 def get_rfc(rfc_num, rfc_ttl):
     server_data = lookup_rfc(rfc_num, rfc_ttl, "get")
-    print(server_data)
+    # print(server_data)
     if server_data[0]:
         peer_connection_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         peer_connection_socket.connect((server_data[0][0]["Host_Name"], int(server_data[0][0]["Port_Number"])))
@@ -109,6 +109,7 @@ def listen_peer():
     while True:
         peer_connection, peer_ip = peer_response_socket.accept()
         data = peer_connection.recv(1024).decode('utf-8')
+        print(data)
         rfc_num = data[data.index('C') + 1: data.index('P') - 1]
         peer_connection.send(pickle.dumps(peer_response(rfc_num)))
         peer_connection.close()

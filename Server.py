@@ -13,10 +13,10 @@ combined_rfc_list = []
 
 
 # method to lookup a particular rfc
-def rfc_lookup(data):
+def rfc_lookup(data1, data2):
     response = []
     for rfc_list in combined_rfc_list:
-        if rfc_list['RFC_Number'] == data:
+        if rfc_list['RFC_Number'] == data1 and rfc_list['RFC_Title'] == data2:
             response.append(rfc_list)
     if len(response) == 0:
         msg = "P2P-CI/1.0 404 Not Found " + "\n" \
@@ -43,7 +43,6 @@ def rfc_add_to_list(connection_socket, address, client_data, peer_port):
 
 
 def new_child_thread(connectionSocket, address):
-    connectionSocket.send(bytes("Connection to server {0} established successfully.".format(serverHost), 'utf-8'))
     server_data = pickle.loads(connectionSocket.recv(1024))
     peer_port = server_data[3]
     peer_key = ['Host_Name', 'Port_Number']
@@ -51,6 +50,8 @@ def new_child_thread(connectionSocket, address):
     active_clients.insert(0, dict(zip(peer_key, peer_value)))
     client_rfc_key = ['RFC_Number', 'RFC_Title', 'Host_Name']
     combined_rfc_key = ['RFC_Number', 'RFC_Title', 'Host_Name', 'Port_Number']
+    print(server_data[0])
+    msg = "P2P-CI/1.0 200 OK \n"
     for rfc in server_data[1]:
         rfc_num = rfc['RFC_Number']
         rfc_ttl = rfc['RFC_Title']
@@ -58,6 +59,9 @@ def new_child_thread(connectionSocket, address):
         client_rfc.insert(0, dict(zip(client_rfc_key, client_rfc_value)))
         combined_rfc_value = [str(rfc_num), rfc_ttl, address[0], str(server_data[3])]
         combined_rfc_list.insert(0, dict(zip(combined_rfc_key, combined_rfc_value)))
+        msg += "RFC " + rfc_num + " " + rfc_ttl + " " + str(address[0]) + " " + str(server_data[3]) + "\n"
+    connectionSocket.send(
+        bytes("Connection to server {0} established successfully.".format(serverHost) + "\n" + msg, 'utf-8'))
     while True:
         client_data = pickle.loads(connectionSocket.recv(1024))
         if type(client_data) == str:
@@ -69,7 +73,7 @@ def new_child_thread(connectionSocket, address):
             if client_data[0][0] == "A":
                 rfc_add_to_list(connectionSocket, address, client_data, peer_port)
             elif client_data[1] == "lookup":
-                new_data = rfc_lookup(client_data[2])
+                new_data = rfc_lookup(client_data[2], client_data[3])
                 connectionSocket.send(new_data)
             elif client_data[1] == 'list':
                 connection_msg = "P2P-CI/1.0 200 OK"
